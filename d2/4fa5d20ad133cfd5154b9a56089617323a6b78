@@ -1,0 +1,23 @@
+peerlink/static/index.html
+  s_2807ba27ed29f1::t_22eec5c060c273 157
+tests/web_ui.test.cjs
+  s_2807ba27ed29f1::t_992d7bd5b55080 1-43
+peerlink/static/app.js
+  s_2807ba27ed29f1::t_22eec5c060c273 488
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "d24fa5d20ad133cfd5154b9a56089617323a6b78",
+  "prompts": {},
+  "sessions": {
+    "s_2807ba27ed29f1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a20cf3-ecdb-76a0-8ed1-0c59f9925ede",
+        "model": "gpt-6.2-astra"
+      },
+      "human_author": "KudoushinichiYu <2449315540@qq.com>"
+    }
+  }
+}
