@@ -1,0 +1,31 @@
+peerlink/releases.py
+  s_2807ba27ed29f1::t_b2d6ecb29fd6df 49,56
+peerlink/static/index.html
+  s_2807ba27ed29f1::t_9d319ac79debc1 157
+peerlink/static/app.js
+  s_2807ba27ed29f1::t_9d319ac79debc1 408
+tests/test_connector.py
+  s_2807ba27ed29f1::t_ab5d4409006847 199-201
+plugins/peerlink/skills/peerlink/SKILL.md
+  s_2807ba27ed29f1::t_9d319ac79debc1 8
+tests/test_hub.py
+  s_2807ba27ed29f1::t_91877600532343 39-40
+peerlink/bundled_skill/SKILL.md
+  s_2807ba27ed29f1::t_9d319ac79debc1 8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "57163ac456d1a225c0e0f8885e28f5ef8b03249d",
+  "prompts": {},
+  "sessions": {
+    "s_2807ba27ed29f1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a20cf3-ecdb-76a0-8ed1-0c59f9925ede",
+        "model": "gpt-6.2-astra"
+      },
+      "human_author": "KudoushinichiYu <2449315540@qq.com>"
+    }
+  }
+}
