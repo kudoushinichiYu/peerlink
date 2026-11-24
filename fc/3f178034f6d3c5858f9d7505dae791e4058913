@@ -1,0 +1,21 @@
+peerlink/relay.py
+  s_2807ba27ed29f1::t_d4b0f14185df2b 233-242
+tests/test_relay.py
+  s_2807ba27ed29f1::t_801d5cc3d96b6b 1-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "fc3f178034f6d3c5858f9d7505dae791e4058913",
+  "prompts": {},
+  "sessions": {
+    "s_2807ba27ed29f1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a20cf3-ecdb-76a0-8ed1-0c59f9925ede",
+        "model": "gpt-6.2-astra"
+      },
+      "human_author": "KudoushinichiYu <2449315540@qq.com>"
+    }
+  }
+}
