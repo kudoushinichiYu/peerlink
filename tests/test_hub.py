@@ -36,7 +36,8 @@ def test_workspace_explains_new_member_setup_and_account_isolation(tmp_path):
     assert "网页只生成命令，不上传路径或文件" in page.text
     assert 'id="binding-path"' in page.text
     assert 'id="release-notice"' in page.text
-    assert "/app.js?v=20260923-local-agent-bridge" in page.text
+    assert "/app.js?v=" in page.text
+    assert "/downloads/peerlink-${release.cli_version}-py3-none-any.whl" in script.text
     assert "Bridge 联通验证（不调用模型）" in page.text
     assert "没有 app-server 可执行程序时请选择手动 Skill 模式" in page.text
     assert 'export PEERLINK_STATE="$HOME/.peerlink-${owner.replace' in script.text

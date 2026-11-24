@@ -46,15 +46,14 @@ def check_releases(hub, installed_cli=__version__, installed_plugin=PLUGIN_VERSI
     if marketplace != PLUGIN_MARKETPLACE:
         raise ValueError("Hub 返回的插件源不是受支持的 Peerlink Marketplace")
 
-    base = hub.rstrip("/")
+    wheel_url = f"{hub.rstrip('/')}/downloads/peerlink-{latest_cli}-py3-none-any.whl"
     return {
         "checked": True,
         "cli": {
             "installed": installed_cli,
             "latest": latest_cli,
             "update_available": latest_cli_key > cli_key,
-            "install_command": f"python3 -m pip install --user --upgrade "
-                               f"{shlex.quote(base + '/downloads/peerlink.whl')}",
+            "install_command": f"python3 -m pip install --user --upgrade {shlex.quote(wheel_url)}",
         },
         "plugin": {
             "bundled": installed_plugin,

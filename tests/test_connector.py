@@ -196,7 +196,9 @@ def test_update_check_detects_newer_cli_and_plugin_with_fixed_marketplace(monkey
 
     assert result["cli"]["update_available"] is True
     assert result["plugin"]["update_available"] is True
-    assert result["cli"]["install_command"].endswith("https://peerlink.jd.com/downloads/peerlink.whl")
+    assert result["cli"]["install_command"].endswith(
+        "https://peerlink.jd.com/downloads/peerlink-0.5.0-py3-none-any.whl"
+    )
     assert result["plugin"]["refresh_command"] == "codex plugin marketplace upgrade peerlink-team"
     assert result["plugin"]["reinstall_commands"] == [
         "codex plugin remove peerlink@peerlink-team",

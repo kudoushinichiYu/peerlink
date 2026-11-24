@@ -405,7 +405,7 @@ async function loadReleaseInfo() {
     el("release-cli-version").textContent = release.cli_version;
     el("release-plugin-version").textContent = release.plugin_version;
     el("release-notice").hidden = false;
-    const cliCommand = `python3 -m pip install --user --upgrade ${shellQuote(`${location.origin}/downloads/peerlink.whl`)}`;
+    const cliCommand = `python3 -m pip install --user --upgrade ${shellQuote(`${location.origin}/downloads/peerlink-${release.cli_version}-py3-none-any.whl`)}`;
     const pluginCommands = "peerlink skill-install --force";
     el("copy-cli-update").onclick = () => copyText(cliCommand, "客户端更新命令已复制；运行前请确认。请在本机终端粘贴执行。");
     el("copy-plugin-update").onclick = () => copyText(pluginCommands, "Skill 更新命令已复制；请在安装新客户端后运行。");
