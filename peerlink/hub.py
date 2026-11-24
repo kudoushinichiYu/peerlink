@@ -195,6 +195,7 @@ class Store:
 
     def approve_user(self, name):
         with self.connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
             row = conn.execute("SELECT status FROM users WHERE id=?", (name,)).fetchone()
             if not row:
                 raise KeyError("用户不存在")
@@ -204,6 +205,7 @@ class Store:
 
     def reject_user(self, name):
         with self.connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
             row = conn.execute("SELECT status FROM users WHERE id=?", (name,)).fetchone()
             if not row:
                 raise KeyError("用户不存在")
@@ -234,6 +236,7 @@ class Store:
 
     def enable_user(self, name):
         with self.connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
             row = conn.execute("SELECT status FROM users WHERE id=?", (name,)).fetchone()
             if not row:
                 raise KeyError("User not found")

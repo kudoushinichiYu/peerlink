@@ -4,6 +4,7 @@ import sys
 import time
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 
 import pytest
 
@@ -272,6 +273,29 @@ def test_restart_preserves_assigned_roles(tmp_path):
     with create_app(db_path).state.store.connect() as conn:
         roles = dict(conn.execute("SELECT id,is_admin FROM users"))
     assert roles == {"first-member": 0, "administrator": 1}
+
+
+@pytest.mark.parametrize("action", ["approve", "reject", "enable"])
+def test_concurrent_account_decisions_transition_once(tmp_path, action):
+    store = create_app(tmp_path / "hub.db").state.store
+    store.register_user("member")
+    if action == "enable":
+        store.approve_user("member")
+        store.disable_user("member", "admin")
+    transition = {"approve": store.approve_user, "reject": store.reject_user,
+                  "enable": store.enable_user}[action]
+    callers = Barrier(6)
+
+    def decide(unused):
+        callers.wait()
+        try:
+            transition("member")
+        except (ValueError, KeyError):
+            return False
+        return True
+
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        assert sum(pool.map(decide, range(6))) == 1
 
 
 def question(client, headers):
