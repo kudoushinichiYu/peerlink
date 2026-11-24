@@ -485,7 +485,7 @@ el("pair-device").onclick = () => safe(async () => {
   const result = await api("/api/pairing-codes", "POST");
   const command = [
     `export PEERLINK_STATE="$HOME/.peerlink-${owner.replace(/[^a-zA-Z0-9._-]/g, "-")}"`,
-    `peerlink --state "$PEERLINK_STATE" connect --hub https://peerlink.jd.com --name ${shellQuote(deviceName)} --code ${shellQuote(result.code)}`
+    `peerlink --state "$PEERLINK_STATE" connect --hub ${shellQuote(location.origin)} --name ${shellQuote(deviceName)} --code ${shellQuote(result.code)}`
   ].join("\n");
   el("pairing-code").hidden = false;
   el("pairing-code").textContent = `配对码：${result.code} · 10 分钟有效 · 一次性使用`;
