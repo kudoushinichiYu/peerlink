@@ -148,6 +148,7 @@ def test_bridge_reconnects_after_handshake_failure_and_dropped_socket(tmp_path, 
     save_json(tmp_path / "connector.json", {"hub": "http://127.0.0.1:8000", "id": "device",
                                             "owner": "bob", "token": "test", "projects": {}})
     attempts = []
+    recoveries = []
 
     class DroppedSocket:
         def __aiter__(self):
@@ -164,9 +165,77 @@ def test_bridge_reconnects_after_handshake_failure_and_dropped_socket(tmp_path, 
             raise asyncio.CancelledError
 
     monkeypatch.setattr("websockets.asyncio.client.connect", connect)
+    monkeypatch.setattr(BridgeRunner, "recover_drafts", lambda self: recoveries.append(self.state))
     with pytest.raises(asyncio.CancelledError):
         asyncio.run(BridgeRunner(tmp_path).run())
     assert attempts == ["ws://127.0.0.1:8000/api/bridge/ws"] * 3
+    assert recoveries == [tmp_path]
+
+
+def test_bridge_recovers_interrupted_work_and_keeps_answers_local(tmp_path):
+    app, client, sender, owner, device, device_auth = setup_team(tmp_path)
+    state = tmp_path / "device"
+    save_json(state / "connector.json", {"hub": "http://localhost", "id": device["id"],
+                                         "owner": "bob", "token": device["token"]})
+    runner = BridgeRunner(state)
+    runner.client.http.close()
+    runner.client = LocalClient(client, device_auth)
+    cases = [
+        ("a" * 24, "bridge", "RUNNING", None, "FAILED"),
+        ("b" * 24, "bridge", "RUNNING", "draft on disk", "WAITING_OUTPUT_APPROVAL"),
+        ("c" * 24, "bridge", "WAITING_OUTPUT_APPROVAL", "ready before restart", "WAITING_OUTPUT_APPROVAL"),
+        ("d" * 24, "legacy", "RUNNING", None, "RUNNING"),
+    ]
+    for mid, transport, status, answer, _ in cases:
+        with app.state.store.connect() as conn:
+            conn.execute("INSERT INTO requests(id,sender,receiver,project,device,question,status,created,"
+                         "lease,expires,transport) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                         (mid, "alex", "bob", "recommendation", device["id"], "Hello", status,
+                          time.time(), "lease", time.time() + 120, transport))
+        task = {"id": mid, "lease": "lease", "transport": transport}
+        if answer:
+            task["answer"] = answer
+        save_json(state / "drafts" / f"{mid}.pending.json", task)
+        runner.storage.reserve(mid, "recommendation", "alex")
+    runner.recover_drafts()
+    runner.recover_drafts()
+    for mid, transport, _, answer, expected in cases:
+        remote = client.get(f"/api/requests/{mid}", headers=sender).json()
+        assert remote["status"] == expected
+        assert remote["response"] is None
+        path = state / "drafts" / f"{mid}.pending.json"
+        if expected == "FAILED":
+            assert not path.exists()
+            assert path.with_suffix(".stopped").is_file()
+        else:
+            assert read_json(path).get("answer") == answer
+
+
+def test_second_bridge_cannot_recover_work_owned_by_running_bridge(tmp_path, monkeypatch):
+    save_json(tmp_path / "connector.json", {"hub": "http://localhost", "id": "device",
+                                            "owner": "bob", "token": "test"})
+
+    async def exercise():
+        running = asyncio.Event()
+        release = asyncio.Event()
+
+        async def serve(self, auth_dir):
+            running.set()
+            await release.wait()
+
+        monkeypatch.setattr(BridgeRunner, "_serve", serve)
+        first = asyncio.create_task(BridgeRunner(tmp_path).run())
+        await running.wait()
+        try:
+            with pytest.raises(ValueError, match="Bridge 已在运行"):
+                await BridgeRunner(tmp_path).run()
+            assert not first.done()
+        finally:
+            release.set()
+            await first
+        await BridgeRunner(tmp_path).run()
+
+    asyncio.run(exercise())
 
 
 def test_real_websocket_bridge_and_http_approval(tmp_path, monkeypatch):

@@ -1,6 +1,7 @@
 """Outbound WebSocket Bridge. It never listens on a local port."""
 
 import asyncio
+import fcntl
 import json
 import threading
 from pathlib import Path
@@ -12,7 +13,7 @@ from pydantic import ValidationError
 from peerlink.bridge.backends import create_backend
 from peerlink.bridge.registry import allowed_sender, load_agents, validate_workspace
 from peerlink.bridge.storage import BridgeState
-from peerlink.connector import configured, keep_leases, notify, save_json, work
+from peerlink.connector import configured, keep_leases, notify, read_json, save_json, work
 from peerlink.protocol import AgentMessage, AgentResponse
 
 
@@ -100,7 +101,11 @@ class BridgeRunner:
                 # The HTTP result already committed the draft. A dropped socket must
                 # not turn a reviewable local answer into a failed request.
                 pass
-        except (Exception, asyncio.CancelledError):
+        except (Exception, asyncio.CancelledError) as error:
+            if isinstance(error, asyncio.CancelledError) and "answer" in task:
+                # Startup reconciles a saved answer; a remote cancellation will
+                # also be reflected by its next lease heartbeat.
+                raise
             self.storage.finish(message.message_id, "FAILED")
             await self._fail(task)
             if path.exists():
@@ -127,7 +132,60 @@ class BridgeRunner:
             await asyncio.sleep(30)
             await socket.send(json.dumps({"version": "1", "type": "device.heartbeat"}))
 
+    def recover_drafts(self):
+        saved = []
+        for path in (self.state / "drafts").glob("*.pending.json"):
+            try:
+                task = read_json(path)
+                if task.get("transport") != "bridge":
+                    continue
+                if "answer" in task:
+                    saved.append((path, task))
+                    continue
+                # Retire the orphan first so it cannot keep renewing offline.
+                path.rename(path.with_suffix(".stopped"))
+            except FileNotFoundError:
+                continue
+            request_id = task["id"]
+            self.storage.finish(request_id, "FAILED")
+            try:
+                self.client.call("POST", f"/api/connector/{request_id}/result",
+                                 json={"lease": task["lease"], "action": "fail"})
+            except httpx.HTTPError:
+                pass  # Without heartbeats the Hub will expire the lease.
+
+        for path, task in saved:
+            request_id = task["id"]
+            try:
+                status = self.client.call("GET", f"/api/requests/{request_id}")["status"]
+                if status == "RUNNING":
+                    status = self.client.call("POST", f"/api/connector/{request_id}/result",
+                                              json={"lease": task["lease"], "action": "draft_ready"})["status"]
+            except httpx.HTTPStatusError as error:
+                if error.response.status_code not in (403, 404, 409):
+                    raise
+                status = "FAILED"
+            if status == "WAITING_OUTPUT_APPROVAL":
+                self.storage.finish(request_id, "DRAFT_READY")
+            else:
+                self.storage.finish(request_id, status)
+                try:
+                    path.rename(path.with_suffix(".done" if status in ("COMPLETED", "REJECTED") else ".stopped"))
+                except FileNotFoundError:
+                    pass  # A concurrent review or heartbeat already archived it.
+
     async def run(self, auth_dir=None):
+        try:
+            with (self.state / "bridge.lock").open("a") as lock:
+                try:
+                    fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                except BlockingIOError:
+                    raise ValueError("该 Bridge 已在运行") from None
+                await self._serve(auth_dir)
+        finally:
+            self.client.http.close()
+
+    async def _serve(self, auth_dir):
         try:
             from websockets.asyncio.client import connect
             from websockets.exceptions import ConnectionClosed, InvalidHandshake
@@ -142,9 +200,15 @@ class BridgeRunner:
         if self.config.get("projects"):
             threading.Thread(target=work, args=(self.state, False, auth_dir), daemon=True).start()
         delay = 1
+        recovered = False
+        recovery = None
         try:
             while True:
                 try:
+                    if not recovered:
+                        recovery = asyncio.create_task(asyncio.to_thread(self.recover_drafts))
+                        await asyncio.shield(recovery)
+                        recovered = True
                     await asyncio.to_thread(self.register_agents)
                     async with connect(
                         websocket_url(self.config["hub"]),
@@ -180,9 +244,14 @@ class BridgeRunner:
                 delay = min(delay * 2, 30)
         finally:
             stopped.set()
+            if recovery is not None and not recovery.done():
+                await asyncio.gather(recovery, return_exceptions=True)
+            active = list(self.tasks.values())
+            for task in active:
+                task.cancel()
+            await asyncio.gather(*active, return_exceptions=True)
             keeper.join(timeout=20)
             keeper_client.http.close()
-            self.client.http.close()
 
 
 def run_bridge(state, auth_dir=None):
