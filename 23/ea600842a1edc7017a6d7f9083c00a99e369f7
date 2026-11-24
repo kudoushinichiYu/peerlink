@@ -1,0 +1,23 @@
+peerlink/releases.py
+  s_2807ba27ed29f1::t_84c1869c21711b 32-40,52
+peerlink/connector.py
+  s_2807ba27ed29f1::t_84c1869c21711b 14,222
+tests/test_connector.py
+  s_2807ba27ed29f1::t_bba8592a161328 180-182,197-199,205,212-219,239,242
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "23ea600842a1edc7017a6d7f9083c00a99e369f7",
+  "prompts": {},
+  "sessions": {
+    "s_2807ba27ed29f1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a20cf3-ecdb-76a0-8ed1-0c59f9925ede",
+        "model": "gpt-6.2-astra"
+      },
+      "human_author": "KudoushinichiYu <2449315540@qq.com>"
+    }
+  }
+}
