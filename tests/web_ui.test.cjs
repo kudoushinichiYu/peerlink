@@ -41,3 +41,22 @@ test("the pairing command uses the Hub that issued the code", async () => {
     assert.ok(element("connect-command").textContent.includes(`--hub '${origin}'`));
   }
 });
+
+test("switching recipients clears the previous project and ignores a late response", async () => {
+  let finishFirst;
+  const first = new Promise(resolve => { finishFirst = resolve; });
+  const {element, context} = loadPage("https://hub.example.org", url => {
+    if (url === "/api/projects?owner=first") return first;
+    if (url === "/api/projects?owner=second") return [{id: "new", runtime: "mock"}];
+    return [];
+  });
+  element("project").value = "legacy:old";
+  element("peer").value = "first";
+  const slow = context.loadPeerProjects();
+  assert.equal(element("project").value, "");
+  element("peer").value = "second";
+  await context.loadPeerProjects();
+  finishFirst([{id: "obsolete", runtime: "mock"}]);
+  await slow;
+  assert.equal(element("project").value, "legacy:new");
+});

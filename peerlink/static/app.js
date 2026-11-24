@@ -5,6 +5,7 @@ let deviceRows = [];
 let ownProjects = [];
 let requestRows = [];
 let peerRows = [];
+let peerProjectsRequest = 0;
 
 const el = id => document.getElementById(id);
 const viewCopy = {
@@ -268,16 +269,19 @@ async function loadPeers() {
 }
 
 async function loadPeerProjects() {
+  const request = ++peerProjectsRequest;
   const picker = el("project");
   if (!el("peer").value) {
     picker.replaceChildren(new Option("先选择项目负责人", ""));
     return;
   }
   const selectedOwner = encodeURIComponent(el("peer").value);
+  picker.replaceChildren(new Option("正在加载该成员的项目…", ""));
   const [legacy, agents] = await Promise.all([
     api(`/api/projects?owner=${selectedOwner}`),
     api(`/api/bridge/agents?owner=${selectedOwner}`)
   ]);
+  if (request !== peerProjectsRequest) return;
   const projects = [...legacy.map(project => ({...project, transport: "legacy"})),
     ...agents.map(agent => ({...agent, runtime: "bridge", transport: "bridge"}))];
   picker.replaceChildren(...projects.map(project => new Option(
