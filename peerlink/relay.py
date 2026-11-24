@@ -97,6 +97,7 @@ def install_relay_routes(app, store, member, device, digest, audit_as, expire):
         try:
             await socket.send_json({"version": "1", "type": "device.hello", "device_id": device_id})
             with store.connect() as conn:
+                expire(conn)
                 pending = conn.execute(
                     "SELECT * FROM requests WHERE device=? AND transport='bridge' "
                     "AND status='WAITING_DEVICE' ORDER BY created", (device_id,)

@@ -364,13 +364,20 @@ def create_app(db_path=None):
                      (now,))
         for row in rows:
             audit_as(conn, row["id"], "system", "lease_expired")
-        conn.execute("DELETE FROM requests WHERE transport='bridge' AND retain_until<?", (now,))
+        conn.execute("DELETE FROM requests WHERE transport='bridge' AND retain_until<=?", (now,))
 
-    def load(conn, request_id):
-        row = conn.execute("SELECT * FROM requests WHERE id=?", (request_id,)).fetchone()
-        if not row:
-            raise HTTPException(404, "请求不存在")
-        return row
+    @contextmanager
+    def request_transaction(request_id):
+        with store.connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            conn.execute("DELETE FROM requests WHERE id=? AND transport='bridge' AND retain_until<=?",
+                         (request_id, time.time()))
+            row = conn.execute("SELECT * FROM requests WHERE id=?", (request_id,)).fetchone()
+            if row:
+                yield conn, row
+                return
+        # Report expiry only after the deletion has committed.
+        raise HTTPException(404, "请求不存在")
 
     def check_lease(row, current, lease):
         if row["device"] != current["id"] or row["receiver"] != current["owner"]:
@@ -660,21 +667,18 @@ def create_app(db_path=None):
 
     @app.get("/api/requests/{request_id}")
     def get_request(request_id: str, current=Depends(member)):
-        with store.connect() as conn:
-            row = dict(load(conn, request_id))
+        with request_transaction(request_id) as (conn, row):
             if current["owner"] not in (row["sender"], row["receiver"]):
                 raise HTTPException(403, "无权查看")
             expire(conn)
-            row = dict(load(conn, request_id))
-            for key in ("lease", "expires", "device"):
-                row.pop(key)
-            return row
+            row = conn.execute("SELECT * FROM requests WHERE id=?", (request_id,)).fetchone()
+        if not row:
+            raise HTTPException(404, "请求不存在")
+        return {key: row[key] for key in row.keys() if key not in ("lease", "expires", "device")}
 
     @app.post("/api/requests/{request_id}/decision")
     async def decision(request_id: str, body: DecisionInput, current=Depends(actor)):
-        with store.connect() as conn:
-            conn.execute("BEGIN IMMEDIATE")
-            row = load(conn, request_id)
+        with request_transaction(request_id) as (conn, row):
             if body.action == "cancel":
                 if row["sender"] != current["owner"]:
                     raise HTTPException(403, "仅发送方可取消")
@@ -743,9 +747,7 @@ def create_app(db_path=None):
 
     @app.post("/api/connector/{request_id}/heartbeat")
     def heartbeat(request_id: str, body: LeaseInput, current=Depends(device)):
-        with store.connect() as conn:
-            conn.execute("BEGIN IMMEDIATE")
-            row = load(conn, request_id)
+        with request_transaction(request_id) as (conn, row):
             check_lease(row, current, body.lease)
             conn.execute("UPDATE requests SET expires=? WHERE id=?", (time.time() + 120, request_id))
             conn.execute("UPDATE devices SET seen=? WHERE id=?", (time.time(), current["id"]))
@@ -753,9 +755,7 @@ def create_app(db_path=None):
 
     @app.post("/api/connector/{request_id}/result")
     def result(request_id: str, body: ResultInput, current=Depends(device)):
-        with store.connect() as conn:
-            conn.execute("BEGIN IMMEDIATE")
-            row = load(conn, request_id)
+        with request_transaction(request_id) as (conn, row):
             check_lease(row, current, body.lease)
             if body.action != "send" and body.content is not None:
                 raise HTTPException(400, "草稿或错误正文不得上传")

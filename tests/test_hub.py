@@ -509,6 +509,45 @@ def test_removing_legacy_project_preserves_bridge_request(setup):
             assert row["status"] == expected
 
 
+@pytest.mark.parametrize("operation", ["read", "approve", "heartbeat", "result", "reconnect"])
+def test_bridge_request_retention_at_access_and_delivery(setup, operation):
+    app, client, headers, device = setup
+    device_auth = headers["device"]
+    with client.websocket_connect("/api/bridge/ws", headers=device_auth):
+        client.put("/api/bridge/agents", headers=device_auth,
+                   json={"id": "recommendation", "visibility": "team"}).raise_for_status()
+        message = client.post("/api/bridge/messages", headers=headers["alex"],
+                              json={"receiver": "bob", "agent_id": "recommendation", "content": "Update?"})
+        request_id = message.json()["id"]
+        path = f"/api/requests/{request_id}"
+        if operation in ("heartbeat", "result", "reconnect"):
+            client.post(path + "/decision", headers=headers["bob"], json={"action": "approve"}).raise_for_status()
+        if operation in ("heartbeat", "result"):
+            task = client.post("/api/connector/claim", headers=device_auth,
+                               json={"request_id": request_id, "transport": "bridge"}).json()
+            lease = {"lease": task["lease"]}
+        with app.state.store.connect() as conn:
+            conn.execute("UPDATE requests SET retain_until=? WHERE id=?", (time.time() - 1, request_id))
+
+        if operation == "read":
+            assert client.get(path, headers=headers["bob"]).status_code == 404
+        elif operation == "approve":
+            assert client.post(path + "/decision", headers=headers["bob"], json={"action": "approve"}).status_code == 404
+        elif operation in ("heartbeat", "result"):
+            if operation == "result":
+                lease["action"] = "draft_ready"
+            assert client.post(f"/api/connector/{request_id}/{operation}",
+                               headers=device_auth, json=lease).status_code == 404
+
+    if operation == "reconnect":
+        with client.websocket_connect("/api/bridge/ws", headers=device_auth) as socket:
+            assert socket.receive_json()["type"] == "device.hello"
+            socket.send_json({"type": "device.heartbeat"})
+            assert socket.receive_json()["type"] == "device.heartbeat"
+    with app.state.store.connect() as conn:
+        assert conn.execute("SELECT id FROM requests WHERE id=?", (request_id,)).fetchone() is None
+
+
 def test_disabling_user_revokes_access_and_audits_unfinished_requests(setup):
     task = claimed(setup)
     app, client, headers, device = setup
