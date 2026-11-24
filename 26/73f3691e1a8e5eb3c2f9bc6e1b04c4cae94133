@@ -1,0 +1,21 @@
+tests/test_hub.py
+  s_2807ba27ed29f1::t_a36c02bce9dc71 265-276
+peerlink/hub.py
+  s_2807ba27ed29f1::t_3bdc6542ec6b1f 115,135-137
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "2673f3691e1a8e5eb3c2f9bc6e1b04c4cae94133",
+  "prompts": {},
+  "sessions": {
+    "s_2807ba27ed29f1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a20cf3-ecdb-76a0-8ed1-0c59f9925ede",
+        "model": "gpt-6.2-astra"
+      },
+      "human_author": "kudoushinichiYu <2449315540@qq.com>"
+    }
+  }
+}
