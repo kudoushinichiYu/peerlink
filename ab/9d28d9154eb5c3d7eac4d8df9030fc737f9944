@@ -1,0 +1,23 @@
+peerlink/hub.py
+  s_2807ba27ed29f1::t_2efe3a6cabfc90 367,369-380,670,674-677,681,750,758
+peerlink/relay.py
+  s_2807ba27ed29f1::t_096bc0f0ff78a8 100
+tests/test_hub.py
+  s_2807ba27ed29f1::t_fdefd7b6b64a7c 512-550
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "ab9d28d9154eb5c3d7eac4d8df9030fc737f9944",
+  "prompts": {},
+  "sessions": {
+    "s_2807ba27ed29f1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a20cf3-ecdb-76a0-8ed1-0c59f9925ede",
+        "model": "gpt-6.2-astra"
+      },
+      "human_author": "KudoushinichiYu <2449315540@qq.com>"
+    }
+  }
+}
