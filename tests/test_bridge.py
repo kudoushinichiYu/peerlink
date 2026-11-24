@@ -262,11 +262,11 @@ assert turn["params"]["sandboxPolicy"] == {"type": "readOnly", "networkAccess": 
 assert turn["params"]["cwd"] == os.getcwd()
 send({"id": 3, "result": {"turn": {"id": "fake-turn"}}})
 send({"method": "item/completed", "params": {"item": {
-    "type": "agentMessage", "phase": "final_answer", "text": "Project answer"}}})
+    "type": "agentMessage", "phase": "final_answer", "text": "🛰" * 100000}}})
 send({"method": "turn/completed", "params": {"turn": {
     "id": "fake-turn", "status": "completed"}}})
 ''')
     executable.chmod(0o700)
     answer = asyncio.run(CodexAppServerBackend(str(executable)).answer("Question", str(workspace)))
-    assert answer.text == "Project answer"
+    assert answer.text == "🛰" * 100000
     assert answer.thread_id == "fake-thread"

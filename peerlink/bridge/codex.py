@@ -10,6 +10,10 @@ from peerlink import __version__
 from peerlink.bridge.backends import AgentBackend, BackendAnswer
 
 
+# A 100,000-character answer can use 12 JSON bytes per character in surrogate pairs.
+MAX_PROTOCOL_LINE_BYTES = 2 * 1024 * 1024
+
+
 class CodexAppServerBackend(AgentBackend):
     def __init__(self, binary=None):
         self.binary = binary or os.environ.get("PEERLINK_CODEX_BINARY") or shutil.which("codex")
@@ -25,6 +29,7 @@ class CodexAppServerBackend(AgentBackend):
             self.binary, "app-server", cwd=workspace,
             stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.DEVNULL,
+            limit=MAX_PROTOCOL_LINE_BYTES,
         )
         try:
             await self._rpc(process, 1, "initialize", {"clientInfo": {
