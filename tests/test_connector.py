@@ -2,6 +2,7 @@ import json
 import os
 import socket
 import subprocess
+import threading
 import time
 from pathlib import Path
 
@@ -144,6 +145,36 @@ def test_request_notifications_are_deduplicated(tmp_path, monkeypatch):
     assert len(messages) == 1
     assert "alex" in messages[0][1]
     assert (tmp_path / "notifications.json").stat().st_mode & 0o777 == 0o600
+
+
+def test_bridge_worker_starts_polling_after_first_legacy_binding(tmp_path, monkeypatch):
+    from unittest.mock import Mock
+
+    from peerlink.connector import work
+
+    config_path = tmp_path / "connector.json"
+    config = {"owner": "bob", "projects": {}}
+    save_json(config_path, config)
+    client = Mock()
+    client.call.side_effect = lambda method, path, **kwargs: [] if path == "/api/requests" else None
+    monkeypatch.setattr("peerlink.connector.configured", lambda state: (config, client))
+
+    ticks = []
+    stopped = threading.Event()
+
+    def next_tick(_seconds):
+        ticks.append([call.args[1] for call in client.call.call_args_list])
+        client.call.reset_mock()
+        if len(ticks) == 1:
+            save_json(config_path, {**config, "projects": {"demo": {"runtime": "mock"}}})
+        else:
+            stopped.set()
+
+    monkeypatch.setattr(stopped, "wait", next_tick)
+    work(tmp_path, stop_event=stopped)
+
+    assert ticks == [["/api/releases"], ["/api/requests", "/api/connector/claim"]]
+    client.http.close.assert_called_once()
 
 
 def test_release_notifications_are_deduplicated_and_never_update_automatically(tmp_path, monkeypatch):

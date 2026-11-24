@@ -149,6 +149,11 @@ def test_bridge_reconnects_after_handshake_failure_and_dropped_socket(tmp_path, 
                                             "owner": "bob", "token": "test", "projects": {}})
     attempts = []
     recoveries = []
+    workers = []
+
+    def work(state, once, auth_dir, *, stop_event):
+        workers.append((state, stop_event))
+        stop_event.wait(10)
 
     class DroppedSocket:
         def __aiter__(self):
@@ -166,10 +171,12 @@ def test_bridge_reconnects_after_handshake_failure_and_dropped_socket(tmp_path, 
 
     monkeypatch.setattr("websockets.asyncio.client.connect", connect)
     monkeypatch.setattr(BridgeRunner, "recover_drafts", lambda self: recoveries.append(self.state))
+    monkeypatch.setattr("peerlink.bridge.client.work", work)
     with pytest.raises(asyncio.CancelledError):
         asyncio.run(BridgeRunner(tmp_path).run())
     assert attempts == ["ws://127.0.0.1:8000/api/bridge/ws"] * 3
     assert recoveries == [tmp_path]
+    assert len(workers) == 1 and workers[0][0] == tmp_path and workers[0][1].is_set()
 
 
 def test_bridge_recovers_interrupted_work_and_keeps_answers_local(tmp_path):

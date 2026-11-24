@@ -196,9 +196,9 @@ class BridgeRunner:
         keeper = threading.Thread(target=keep_leases,
                                   args=(self.state, keeper_client, stopped), daemon=True)
         keeper.start()
-        # Keep older Mock/Docker/desktop-Skill registrations working during migration.
-        if self.config.get("projects"):
-            threading.Thread(target=work, args=(self.state, False, auth_dir), daemon=True).start()
+        worker = threading.Thread(target=work, args=(self.state, False, auth_dir),
+                                  kwargs={"stop_event": stopped}, daemon=True)
+        worker.start()
         delay = 1
         recovered = False
         recovery = None
@@ -251,6 +251,7 @@ class BridgeRunner:
                 task.cancel()
             await asyncio.gather(*active, return_exceptions=True)
             keeper.join(timeout=20)
+            worker.join(timeout=20)
             keeper_client.http.close()
 
 

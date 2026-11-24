@@ -249,17 +249,23 @@ def notify_release_changes(state, client):
         pass
 
 
-def work(state, once=False, auth_dir=None):
+def work(state, once=False, auth_dir=None, *, stop_event=None):
     state = Path(state)
     config, client = configured(state)
     drafts = state / "drafts"
     drafts.mkdir(exist_ok=True, mode=0o700)
     lock = (state / "worker.lock").open("w")
-    try:
-        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except BlockingIOError:
-        lock.close()
-        raise ValueError("该 Connector 已在运行")
+    while True:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            break
+        except BlockingIOError:
+            if stop_event is None or stop_event.wait(3):
+                lock.close()
+                client.http.close()
+                if stop_event is None:
+                    raise ValueError("该 Connector 已在运行")
+                return
     for path in drafts.glob("*.pending.json"):
         task = read_json(path)
         if "answer" not in task and not task.get("awaiting_desktop") and task.get("transport") != "bridge":
@@ -269,17 +275,23 @@ def work(state, once=False, auth_dir=None):
             except httpx.HTTPError:
                 pass
             path.rename(path.with_suffix(".stopped"))
-    stopped = threading.Event()
-    keeper = threading.Thread(target=keep_leases, args=(state, client, stopped), daemon=True)
-    keeper.start()
+    # The Bridge maintains leases independently, including while a legacy runtime is busy.
+    stopped = stop_event if stop_event is not None else threading.Event()
+    keeper = None
+    if stop_event is None:
+        keeper = threading.Thread(target=keep_leases, args=(state, client, stopped), daemon=True)
+        keeper.start()
     next_release_check = 0.0
     try:
-        while True:
+        while not stopped.is_set():
             try:
                 now = time.monotonic()
                 if now >= next_release_check:
                     notify_release_changes(state, client)
                     next_release_check = now + 6 * 60 * 60
+                if stop_event is not None and not read_json(state / "connector.json").get("projects"):
+                    stopped.wait(3)
+                    continue
                 notify_request_changes(state, config, client)
                 task = client.call("POST", "/api/connector/claim",
                                    json={"exclude_runtime": "codex-desktop"})
@@ -320,10 +332,11 @@ def work(state, once=False, auth_dir=None):
                 if once:
                     raise
                 print("连接中断，稍后重试。", flush=True)
-            time.sleep(3)
+            stopped.wait(3)
     finally:
-        stopped.set()
-        keeper.join(timeout=25)
+        if keeper is not None:
+            stopped.set()
+            keeper.join(timeout=25)
         client.http.close()
         lock.close()
 
