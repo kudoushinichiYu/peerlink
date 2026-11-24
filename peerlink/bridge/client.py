@@ -213,7 +213,8 @@ class BridgeRunner:
                     async with connect(
                         websocket_url(self.config["hub"]),
                         additional_headers={"Authorization": "Bearer " + self.config["token"]},
-                        max_size=50000,
+                        # A valid 10,000-character question may expand when JSON-escaped.
+                        max_size=128 * 1024,
                     ) as socket:
                         delay = 1
                         heartbeat = asyncio.create_task(self._heartbeat(socket))

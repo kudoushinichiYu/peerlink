@@ -264,6 +264,7 @@ def test_real_websocket_bridge_and_http_approval(tmp_path, monkeypatch):
         probe.bind(("127.0.0.1", 0))
         port = probe.getsockname()[1]
     hub = f"http://127.0.0.1:{port}"
+    question = "\x1b" * 10000
     save_json(state / "connector.json", {"hub": hub, "id": device["id"],
                                           "owner": "bob", "token": device["token"], "projects": {}})
     monkeypatch.setattr("peerlink.bridge.client.notify", lambda *_: None)
@@ -289,7 +290,7 @@ def test_real_websocket_bridge_and_http_approval(tmp_path, monkeypatch):
                     raise AssertionError("Bridge did not connect over a real WebSocket")
                 sent = await http.post("/api/bridge/messages", headers=sender_auth,
                                        json={"receiver": "bob", "agent_id": "recommendation",
-                                             "content": "hello", "message_id": "c" * 24})
+                                             "content": question, "message_id": "c" * 24})
                 assert sent.status_code == 200
                 request_id = sent.json()["id"]
                 before = await http.get(f"/api/requests/{request_id}", headers=sender_auth)
@@ -305,7 +306,7 @@ def test_real_websocket_bridge_and_http_approval(tmp_path, monkeypatch):
                 else:
                     raise AssertionError("Bridge did not create a reviewable draft")
                 assert current.json()["response"] is None
-                assert read_json(state / "drafts" / f"{request_id}.pending.json")["answer"] == "echo: hello"
+                assert read_json(state / "drafts" / f"{request_id}.pending.json")["answer"] == "echo: " + question
         finally:
             background.cancel()
             with suppress(asyncio.CancelledError):
