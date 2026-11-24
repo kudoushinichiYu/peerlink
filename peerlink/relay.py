@@ -230,11 +230,16 @@ def install_relay_routes(app, store, member, device, digest, audit_as, expire):
         })
         if not announced:
             with store.connect() as conn:
-                conn.execute("UPDATE requests SET status='FAILED',error='DEVICE_OFFLINE' WHERE id=?",
-                             (message_id,))
-                audit_as(conn, message_id, "system", "delivery_failed")
-            return {"id": message_id, "thread_id": thread_id,
-                    "status": "FAILED", "error": "DEVICE_OFFLINE"}
+                changed = conn.execute("UPDATE requests SET status='FAILED',error='DEVICE_OFFLINE' "
+                                       "WHERE id=? AND status='WAITING_APPROVAL'", (message_id,))
+                if changed.rowcount:
+                    audit_as(conn, message_id, "system", "delivery_failed")
+                    return {"id": message_id, "thread_id": thread_id,
+                            "status": "FAILED", "error": "DEVICE_OFFLINE"}
+                row = conn.execute("SELECT status FROM requests WHERE id=?", (message_id,)).fetchone()
+                if row is None:
+                    raise HTTPException(404, "请求不存在")
+                return {"id": message_id, "thread_id": thread_id, "status": row["status"]}
         return {"id": message_id, "thread_id": thread_id, "status": "WAITING_APPROVAL"}
 
     return manager
