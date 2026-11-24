@@ -12,7 +12,7 @@ import uvicorn
 from fastapi.testclient import TestClient
 from websockets.exceptions import ConnectionClosedError, InvalidHandshake
 
-from peerlink.bridge.client import BridgeRunner
+from peerlink.bridge.client import BridgeRunner, websocket_url
 from peerlink.bridge.codex import CodexAppServerBackend
 from peerlink.bridge.registry import add_agent
 from peerlink.connector import read_json, review, save_json
@@ -53,6 +53,15 @@ class LocalSocket:
 
     async def send(self, frame):
         self.frames.append(json.loads(frame))
+
+
+@pytest.mark.parametrize("hub,expected", [
+    ("http://[::1]:8000/", "ws://[::1]:8000/api/bridge/ws"),
+    ("https://example.org/team/peerlink", "wss://example.org/team/peerlink/api/bridge/ws"),
+    ("https://example.org/team/peerlink/", "wss://example.org/team/peerlink/api/bridge/ws"),
+])
+def test_websocket_url_preserves_hub_base_path(hub, expected):
+    assert websocket_url(hub) == expected
 
 
 def test_two_users_relay_bridge_echo_and_review(tmp_path, monkeypatch):

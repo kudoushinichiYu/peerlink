@@ -5,7 +5,7 @@ import fcntl
 import json
 import threading
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import urlsplit
 
 import httpx
 from pydantic import ValidationError
@@ -18,9 +18,9 @@ from peerlink.protocol import AgentMessage, AgentResponse
 
 
 def websocket_url(hub):
-    parsed = urlparse(hub)
+    parsed = urlsplit(hub)
     return parsed._replace(scheme="wss" if parsed.scheme == "https" else "ws",
-                           path="/api/bridge/ws", params="", query="", fragment="").geturl()
+                           path=parsed.path.rstrip("/") + "/api/bridge/ws", query="", fragment="").geturl()
 
 
 class BridgeRunner:
