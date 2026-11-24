@@ -130,6 +130,7 @@ class BridgeRunner:
     async def run(self, auth_dir=None):
         try:
             from websockets.asyncio.client import connect
+            from websockets.exceptions import ConnectionClosed, InvalidHandshake
         except ImportError as error:
             raise RuntimeError("缺少 websockets 依赖；请更新 Peerlink 客户端") from error
         stopped = threading.Event()
@@ -172,7 +173,8 @@ class BridgeRunner:
                         finally:
                             heartbeat.cancel()
                             await asyncio.gather(heartbeat, return_exceptions=True)
-                except (OSError, httpx.HTTPError, ValueError, RuntimeError, json.JSONDecodeError) as error:
+                except (OSError, asyncio.TimeoutError, ConnectionClosed, InvalidHandshake,
+                        httpx.HTTPError, ValueError, RuntimeError) as error:
                     print(f"Peerlink Bridge 连接中断：{type(error).__name__}；稍后重连。", flush=True)
                 await asyncio.sleep(delay)
                 delay = min(delay * 2, 30)

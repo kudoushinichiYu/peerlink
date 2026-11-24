@@ -4,11 +4,13 @@ import socket
 import sys
 import threading
 import time
-from contextlib import suppress
+from contextlib import asynccontextmanager, suppress
 
 import httpx
+import pytest
 import uvicorn
 from fastapi.testclient import TestClient
+from websockets.exceptions import ConnectionClosedError, InvalidHandshake
 
 from peerlink.bridge.client import BridgeRunner
 from peerlink.bridge.codex import CodexAppServerBackend
@@ -140,6 +142,31 @@ def test_legacy_project_paths_are_scrubbed_on_migration(tmp_path):
     create_app(tmp_path / "hub.db")
     with app.state.store.connect() as conn:
         assert conn.execute("SELECT path FROM projects WHERE owner='bob'").fetchone()[0] == ""
+
+
+def test_bridge_reconnects_after_handshake_failure_and_dropped_socket(tmp_path, monkeypatch):
+    save_json(tmp_path / "connector.json", {"hub": "http://127.0.0.1:8000", "id": "device",
+                                            "owner": "bob", "token": "test", "projects": {}})
+    attempts = []
+
+    class DroppedSocket:
+        def __aiter__(self):
+            raise ConnectionClosedError(None, None)
+
+    @asynccontextmanager
+    async def connect(url, **kwargs):
+        attempts.append(url)
+        if len(attempts) == 1:
+            raise InvalidHandshake("Hub restarting")
+        if len(attempts) == 2:
+            yield DroppedSocket()
+        else:
+            raise asyncio.CancelledError
+
+    monkeypatch.setattr("websockets.asyncio.client.connect", connect)
+    with pytest.raises(asyncio.CancelledError):
+        asyncio.run(BridgeRunner(tmp_path).run())
+    assert attempts == ["ws://127.0.0.1:8000/api/bridge/ws"] * 3
 
 
 def test_real_websocket_bridge_and_http_approval(tmp_path, monkeypatch):
