@@ -617,7 +617,7 @@ def create_app(db_path=None):
             conn.execute("BEGIN IMMEDIATE")
             conn.execute("DELETE FROM projects WHERE owner=? AND id=? AND device=?",
                          (current["owner"], project_id, current["id"]))
-            cancel_requests(conn, "receiver=? AND project=? AND device=?",
+            cancel_requests(conn, "receiver=? AND project=? AND device=? AND transport='legacy'",
                             (current["owner"], project_id, current["id"]), current["owner"], "project_removed")
         return {"ok": True}
 

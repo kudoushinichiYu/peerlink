@@ -466,6 +466,24 @@ def test_project_removal_bulk_cancel_is_audited(setup):
     assert tuple(event) == ("bob", "project_removed")
 
 
+def test_removing_legacy_project_preserves_bridge_request(setup):
+    app, client, headers, device = setup
+    legacy_id = question(client, headers)
+    with client.websocket_connect("/api/bridge/ws", headers=headers["device"]):
+        agent = client.put("/api/bridge/agents", headers=headers["device"],
+                           json={"id": "recommendation", "visibility": "team"})
+        agent.raise_for_status()
+        message = client.post("/api/bridge/messages", headers=headers["alex"],
+                              json={"receiver": "bob", "agent_id": "recommendation", "content": "Hello"})
+        message.raise_for_status()
+        bridge_id = message.json()["id"]
+
+        client.delete("/api/projects/recommendation", headers=headers["device"]).raise_for_status()
+        for request_id, expected in ((legacy_id, "CANCELLED"), (bridge_id, "WAITING_APPROVAL")):
+            row = client.get(f"/api/requests/{request_id}", headers=headers["bob"]).json()
+            assert row["status"] == expected
+
+
 def test_disabling_user_revokes_access_and_audits_unfinished_requests(setup):
     task = claimed(setup)
     app, client, headers, device = setup
