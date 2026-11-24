@@ -33,6 +33,27 @@ def test_service_install_requires_paired_device(tmp_path, monkeypatch):
         raise AssertionError("未绑定设备不应安装服务")
 
 
+def test_linux_service_reinstall_applies_new_definition(tmp_path, monkeypatch):
+    state = tmp_path / "state"
+    state.mkdir()
+    (state / "connector.json").write_text("{}")
+    target = tmp_path / "peerlink-connector.service"
+    target.write_text("[Service]\nExecStart=/old/worker\n")
+    monkeypatch.setattr(service.sys, "platform", "linux")
+    monkeypatch.setattr(service, "service_path", lambda state: target)
+    calls = []
+    monkeypatch.setattr(service.subprocess, "run", lambda command, check: calls.append(command))
+
+    service.install_service(state)
+
+    assert '"bridge" "start"' in target.read_text()
+    assert calls == [
+        ["systemctl", "--user", "daemon-reload"],
+        ["systemctl", "--user", "enable", target.name],
+        ["systemctl", "--user", "restart", target.name],
+    ]
+
+
 def test_multiple_account_states_get_separate_service_names(tmp_path):
     first = tmp_path / "owner"
     second = tmp_path / "member"

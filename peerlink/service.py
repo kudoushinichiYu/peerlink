@@ -97,7 +97,8 @@ def install_service(state, auth_dir=None):
         target.write_text(systemd_definition(state, auth_dir))
         os.chmod(target, 0o600)
         subprocess.run(["systemctl", "--user", "daemon-reload"], check=True)
-        subprocess.run(["systemctl", "--user", "enable", "--now", target.name], check=True)
+        subprocess.run(["systemctl", "--user", "enable", target.name], check=True)
+        subprocess.run(["systemctl", "--user", "restart", target.name], check=True)
     return target
 
 
