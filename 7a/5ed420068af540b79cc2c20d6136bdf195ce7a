@@ -1,0 +1,43 @@
+tests/test_cli.py
+  s_2f75bfd3e049f0::t_cbc5b7b3ec70e6 6-7,9,71-78
+  s_2f75bfd3e049f0::t_2daf85919efd07 1-2,8,34-70
+README.md
+  s_2807ba27ed29f1::t_06d29d617d1842 66-67
+docs/member-guide.md
+  s_2807ba27ed29f1::t_06d29d617d1842 32-33,43
+README.zh-CN.md
+  s_2807ba27ed29f1::t_06d29d617d1842 66-67
+peerlink/cli.py
+  s_2f75bfd3e049f0::t_2daf85919efd07 63-65,153,158-160,162-165,177
+  s_2807ba27ed29f1::t_06d29d617d1842 161
+peerlink/bridge/registry.py
+  s_2f75bfd3e049f0::t_2daf85919efd07 23-25,52-61
+  s_2f75bfd3e049f0::t_2b29a540a054a7 46
+  s_2f75bfd3e049f0::t_671967712ee782 62-63
+docs/member-guide.zh-CN.md
+  s_2807ba27ed29f1::t_06d29d617d1842 47-48,58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "7a5ed420068af540b79cc2c20d6136bdf195ce7a",
+  "prompts": {},
+  "sessions": {
+    "s_2807ba27ed29f1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a20cf3-ecdb-76a0-8ed1-0c59f9925ede",
+        "model": "gpt-6.2-astra"
+      },
+      "human_author": "KudoushinichiYu <2449315540@qq.com>"
+    },
+    "s_2f75bfd3e049f0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0c2ff-22f2-7123-a418-c80eee7dba32",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "kudoushinichiYu <2449315540@qq.com>"
+    }
+  }
+}
