@@ -29,6 +29,8 @@ The Hub stores project IDs, descriptions, device routing, and access scope, neve
 
 ### Correct a wrong local project path
 
+With a CLI installed from this checkout, check unfinished requests with `peerlink requests`, then run `peerlink agent rebind <project-id> /correct/local/project/path` in the same account state directory. Verify the new path with `peerlink agent list`. The change preserves the cloud registration and sharing scope. Pending requests that have yet to start can now run against the new path.
+
 The deployed 0.5.0 CLI has no direct rebind command. The path exists only in this computer's `agents.json`, so the web page cannot select or change it. Run `peerlink agent list` to inspect the binding and `peerlink requests` to check for unfinished incoming requests to this Agent. Removing it cancels those incoming requests; handle them first. Then, using the same account state directory, run:
 
 ```bash
@@ -38,7 +40,7 @@ peerlink agent list
 peerlink service-install
 ```
 
-Repeat the original backend and visibility settings; the example is only for an Echo allowlist test. Do not bind `/Users`, `/home`, the entire home directory, or a credentials directory. Removing an Agent does not delete project files or your outgoing requests, but it does remove its cloud registration and cancel unfinished incoming requests. A local-only `agent rebind` command is being prepared and is **not available in the deployed 0.5.0 CLI**.
+Repeat the original backend and visibility settings; the example is only for an Echo allowlist test. Do not bind `/Users`, `/home`, the entire home directory, or a credentials directory. Removing an Agent does not delete project files or your outgoing requests, but it does remove its cloud registration and cancel unfinished incoming requests.
 
 ## Propose a new project
 

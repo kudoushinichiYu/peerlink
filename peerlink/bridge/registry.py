@@ -20,8 +20,9 @@ def load_agents(state):
 
 def validate_workspace(path):
     workspace = Path(path).expanduser().resolve(strict=True)
-    if not workspace.is_dir() or workspace in (Path.home(), Path("/")):
-        raise ValueError("请选择具体项目目录，不允许根目录或整个 Home")
+    home = Path.home().resolve()
+    if not workspace.is_dir() or workspace in (home, home.parent, Path("/")):
+        raise ValueError("请选择具体项目目录，不允许根目录、用户目录集合或整个 Home")
     return str(workspace)
 
 
@@ -42,10 +43,22 @@ def add_agent(state, name, workspace, backend="echo", description="",
              "description": description, "visibility": visibility, "allowlist": allowed}
     agents = load_agents(state)
     if name in agents and agents[name]["workspace"] != agent["workspace"]:
-        raise ValueError("本机已注册同名 Agent；先移除再重新绑定路径")
+        raise ValueError("本机已注册同名 Agent；请运行 agent rebind 更新本机路径")
     agents[name] = agent
     save_json(registry_path(state), agents)
     return agent
+
+
+def rebind_agent(state, name, workspace):
+    """Change only this computer's workspace; preserve cloud Agent metadata."""
+    agents = load_agents(state)
+    if name not in agents:
+        raise ValueError("本机未注册该 Agent；请先运行 agent add")
+    new_workspace = validate_workspace(workspace)
+    old_workspace = agents[name]["workspace"]
+    agents[name] = {**agents[name], "workspace": new_workspace}
+    save_json(registry_path(state), agents)
+    return old_workspace, new_workspace
 
 
 def allowed_sender(agent, sender, owner):

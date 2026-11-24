@@ -44,6 +44,8 @@ peerlink service-status
 
 ### 绑定错了本机路径怎么办？
 
+如果从本仓库源码安装了 CLI，先用 `peerlink requests` 检查未完成请求，再在同一账号状态目录运行 `peerlink agent rebind <项目标识> /正确的项目目录`。用 `peerlink agent list` 核对新路径。云端注册和共享范围会保留，尚未开始执行的请求可能使用新目录。
+
 线上 0.5.0 尚无直接修改路径的命令。路径只在本机，不在网页或云端；网页不能替你选电脑上的目录。先用 `peerlink agent list` 确认 Agent 和旧路径，并检查 `peerlink requests` 是否有发给**自己这个 Agent** 的未完成请求。若有，先由双方处理；`agent remove` 会取消这些请求。确认后，在同一账号状态目录执行：
 
 ```bash
@@ -53,7 +55,7 @@ peerlink agent list
 peerlink service-install
 ```
 
-第二行要按原来的 Backend 和可见范围重新填写；示例只适用于 Echo 白名单测试。不要绑定 `/Users`、`/home` 这类用户目录集合。`agent remove` 不会删除本机项目文件，也不会影响自己**发给别人**的请求，但会删除自己的云端 Agent 注册并取消发给它的未完成请求。后续版本将提供只改本机路径的 `agent rebind`，**线上 0.5.0 还不能运行该命令**。
+第二行要按原来的 Backend 和可见范围重新填写；示例只适用于 Echo 白名单测试。不要绑定 `/Users`、`/home` 这类用户目录集合。`agent remove` 不会删除本机项目文件，也不会影响自己**发给别人**的请求，但会删除自己的云端 Agent 注册并取消发给它的未完成请求。
 
 如果只有 Codex 桌面端、没有 app-server 可执行程序，可继续手动回答：
 

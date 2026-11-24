@@ -60,6 +60,9 @@ def main():
     agent_add.add_argument("--description", default="")
     agent_remove = agent_actions.add_parser("remove")
     agent_remove.add_argument("id")
+    agent_rebind = agent_actions.add_parser("rebind")
+    agent_rebind.add_argument("id")
+    agent_rebind.add_argument("workspace")
     agent_actions.add_parser("list")
     bridge = sub.add_parser("bridge")
     bridge_actions = bridge.add_subparsers(dest="bridge_command", required=True)
@@ -147,10 +150,18 @@ def main():
         run_bridge(state, args.auth_dir)
         return
     if args.command == "agent":
-        from peerlink.bridge.registry import (add_agent, load_agents, registry_path,
+        from peerlink.bridge.registry import (add_agent, load_agents, rebind_agent, registry_path,
                                               validate_workspace)
         if args.agent_command == "list":
             print(json.dumps(load_agents(state), ensure_ascii=False, indent=2))
+            return
+        if args.agent_command == "rebind":
+            try:
+                old_workspace, new_workspace = rebind_agent(state, args.id, args.workspace)
+            except (OSError, ValueError) as error:
+                parser.error(str(error))
+            print(f"本机 Agent {args.id} 项目路径已更新：{old_workspace} → {new_workspace}")
+            print("云端 Agent、可见范围和待处理请求未修改；请确认未完成请求可使用新目录。")
             return
         config, client = configured(state)
         if args.agent_command == "remove":
@@ -163,7 +174,7 @@ def main():
         workspace = validate_workspace(args.workspace)
         existing = load_agents(state).get(args.id)
         if existing and existing["workspace"] != workspace:
-            parser.error("本机已注册同名 Agent；先运行 agent remove 再重新绑定")
+            parser.error("本机已注册同名 Agent；请运行 agent rebind 更新本机路径")
         client.call("PUT", "/api/bridge/agents", json={
             "id": args.id, "description": args.description,
             "visibility": args.visibility, "allowlist": args.allow_user,

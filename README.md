@@ -63,6 +63,8 @@ peerlink service-install
 
 Administrators seed the cloud project catalog in the web interface. After pairing, members bind only the local directories they select. Additional catalog entries require administrator approval. **Echo tests routing only; it does not call a model.** For automatic local drafting, use `--backend codex-app-server` only when that executable is available. Codex Desktop alone supports the manual `project-add ... --runtime codex-desktop` Skill flow, not automatic control of an open desktop conversation.
 
+If a bound project moves, a CLI built from this checkout supports `peerlink agent rebind my-project /new/project/path`. Review unfinished requests first. The command preserves the Agent’s sharing settings.
+
 ### 3. Try the approval flow
 
 Use the web interface to select a member and their registered project, then submit a question. The project owner approves execution in the web interface and reviews the resulting draft locally in another activated terminal:

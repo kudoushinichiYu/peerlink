@@ -63,6 +63,8 @@ peerlink service-install
 
 管理员先在网页的“云端项目目录”建立项目。每位成员配对后用 `catalog` 查看目录，再将自己电脑上的对应路径逐个绑定。成员可用 `peerlink project-propose <id> '<说明>'` 申请新项目，管理员批准后才能绑定。**Echo 仅演示消息链路，不调用模型。**真实本机自动起草使用 `--backend codex-app-server`，要求本机有可用的 app-server 可执行程序；只有 Codex 桌面端时可改用 `project-add ... --runtime codex-desktop` 手动 Skill 模式。
 
+项目移动后，从本仓库源码安装的 CLI 可用 `peerlink agent rebind my-project /新的项目目录` 修改本机路径，并保留共享范围。变更前请先检查未完成请求。
+
 ### 3. 体验审批流程
 
 在网页中选择成员及其注册项目，提交问题。项目提供方在网页批准执行后，在本机另一个已激活虚拟环境的终端查看并确认草稿：
