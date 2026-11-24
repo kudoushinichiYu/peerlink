@@ -112,6 +112,7 @@ class Store:
 
     def migrate(self):
         with self.connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
             columns = {row["name"] for row in conn.execute("PRAGMA table_info(users)")}
             if "status" not in columns:
                 conn.execute("ALTER TABLE users ADD COLUMN status TEXT NOT NULL DEFAULT 'ACTIVE'")
@@ -131,8 +132,9 @@ class Store:
             if "retain_until" not in request_columns:
                 conn.execute("ALTER TABLE requests ADD COLUMN retain_until REAL")
             conn.execute("UPDATE users SET status='ACTIVE' WHERE status=''")
-            conn.execute("UPDATE users SET is_admin=1 "
-                         "WHERE id=(SELECT id FROM users ORDER BY created,rowid LIMIT 1)")
+            if "is_admin" not in columns:
+                conn.execute("UPDATE users SET is_admin=1 "
+                             "WHERE id=(SELECT id FROM users ORDER BY created,rowid LIMIT 1)")
             conn.execute("INSERT OR IGNORE INTO project_catalog(id,description,status,created_by,created) "
                          "SELECT id,MAX(description),'ACTIVE',MIN(owner),? FROM projects GROUP BY id",
                          (time.time(),))

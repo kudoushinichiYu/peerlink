@@ -262,6 +262,18 @@ def test_existing_users_are_activated_and_first_is_admin(tmp_path):
     assert migrated.get("/api/requests", headers={"Authorization": "Bearer legacy-token"}).status_code == 200
 
 
+def test_restart_preserves_assigned_roles(tmp_path):
+    db_path = tmp_path / "hub.db"
+    store = create_app(db_path).state.store
+    store.register_user("first-member")
+    store.create_admin("administrator")
+    store.approve_user("first-member")
+
+    with create_app(db_path).state.store.connect() as conn:
+        roles = dict(conn.execute("SELECT id,is_admin FROM users"))
+    assert roles == {"first-member": 0, "administrator": 1}
+
+
 def question(client, headers):
     response = client.post("/api/requests", headers=headers["alex"], json={
         "receiver": "bob", "project": "recommendation", "question": "为什么换模型？"})
