@@ -1,0 +1,23 @@
+tests/test_bridge.py
+  s_2807ba27ed29f1::t_ba636116157659 151,168,172-238
+peerlink/bridge/client.py
+  s_2807ba27ed29f1::t_f8b09fccf0ef51 4,16,135,137-141,144,146-148,176,178-188,203,208,211,249-252
+  s_2807ba27ed29f1::t_c512ee1adc682b 136,142-143,145,149-175
+  s_2807ba27ed29f1::t_da097cd85cd7f3 104-108,204,209-210,247-248
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "423ad9e334d9933371ac64b0e1b2fcc203cd5417",
+  "prompts": {},
+  "sessions": {
+    "s_2807ba27ed29f1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a20cf3-ecdb-76a0-8ed1-0c59f9925ede",
+        "model": "gpt-6.2-astra"
+      },
+      "human_author": "KudoushinichiYu <2449315540@qq.com>"
+    }
+  }
+}
