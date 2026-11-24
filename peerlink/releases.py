@@ -29,6 +29,15 @@ def version_key(value):
     return tuple(map(int, match.groups())) if match else None
 
 
+def plugin_version_key(value):
+    """Order Peerlink's dated Codex builds within the same numeric release."""
+    release = version_key(value)
+    if release is None:
+        return None
+    build = re.search(r"\+codex\.([0-9]+)$", value)
+    return (*release, int(build[1]) if build else 0)
+
+
 def check_releases(hub, installed_cli=__version__, installed_plugin=PLUGIN_VERSION):
     client = Client(hub)
     try:
@@ -40,7 +49,7 @@ def check_releases(hub, installed_cli=__version__, installed_plugin=PLUGIN_VERSI
     latest_plugin = remote.get("plugin_version") if isinstance(remote, dict) else None
     marketplace = remote.get("plugin_marketplace") if isinstance(remote, dict) else None
     cli_key, latest_cli_key = version_key(installed_cli), version_key(latest_cli)
-    plugin_key, latest_plugin_key = version_key(installed_plugin), version_key(latest_plugin)
+    plugin_key, latest_plugin_key = plugin_version_key(installed_plugin), plugin_version_key(latest_plugin)
     if not cli_key or not latest_cli_key or not plugin_key or not latest_plugin_key:
         raise ValueError("Hub 返回的版本信息格式无效")
     if marketplace != PLUGIN_MARKETPLACE:

@@ -177,7 +177,9 @@ def test_bridge_worker_starts_polling_after_first_legacy_binding(tmp_path, monke
     client.http.close.assert_called_once()
 
 
-def test_release_notifications_are_deduplicated_and_never_update_automatically(tmp_path, monkeypatch):
+@pytest.mark.parametrize("plugin_build_only", [False, True])
+def test_release_notifications_are_deduplicated_and_never_update_automatically(tmp_path, monkeypatch,
+                                                                               plugin_build_only):
     from peerlink import __version__
     from peerlink.releases import PLUGIN_VERSION
 
@@ -192,18 +194,29 @@ def test_release_notifications_are_deduplicated_and_never_update_automatically(t
 
     messages = []
     monkeypatch.setattr("peerlink.connector.notify", lambda title, message: messages.append((title, message)))
+    if plugin_build_only:
+        monkeypatch.setattr("peerlink.connector.__version__", "9.0.0")
+        monkeypatch.setattr("peerlink.connector.PLUGIN_VERSION", "9.0.0+codex.20981231")
     notify_release_changes(tmp_path, FakeClient())
     notify_release_changes(tmp_path, FakeClient())
 
     assert len(messages) == 1
     assert "9.0.0" in messages[0][1]
+    assert ("CLI" in messages[0][1]) == (not plugin_build_only)
     assert "确认" in messages[0][1]
     assert (tmp_path / "update-notifications.json").stat().st_mode & 0o777 == 0o600
     assert __version__ != "9.0.0"
     assert PLUGIN_VERSION != "9.0.0+codex.20990101"
 
 
-def test_update_check_detects_newer_cli_and_plugin_with_fixed_marketplace(monkeypatch):
+@pytest.mark.parametrize(("installed_plugin", "plugin_update"), [
+    ("0.4.0+codex.20260923", True),
+    ("0.5.0+codex.20260923", True),
+    ("0.5.0+codex.20260924", False),
+    ("0.5.0+codex.20260925", False),
+])
+def test_update_check_detects_newer_cli_and_plugin_with_fixed_marketplace(monkeypatch, installed_plugin,
+                                                                          plugin_update):
     class FakeHttp:
         def close(self):
             pass
@@ -223,10 +236,10 @@ def test_update_check_detects_newer_cli_and_plugin_with_fixed_marketplace(monkey
 
     monkeypatch.setattr("peerlink.releases.Client", FakeClient)
 
-    result = check_releases("https://peerlink.jd.com", "0.4.0", "0.4.0+codex.20260923")
+    result = check_releases("https://peerlink.jd.com", "0.4.0", installed_plugin)
 
     assert result["cli"]["update_available"] is True
-    assert result["plugin"]["update_available"] is True
+    assert result["plugin"]["update_available"] is plugin_update
     assert result["cli"]["install_command"].endswith(
         "https://peerlink.jd.com/downloads/peerlink-0.5.0-py3-none-any.whl"
     )

@@ -11,7 +11,7 @@ import httpx
 
 from peerlink import __version__
 from peerlink.client import Client
-from peerlink.releases import PLUGIN_MARKETPLACE, PLUGIN_VERSION, version_key
+from peerlink.releases import PLUGIN_MARKETPLACE, PLUGIN_VERSION, plugin_version_key, version_key
 from peerlink.service import notify
 
 
@@ -219,7 +219,7 @@ def notify_release_changes(state, client):
         cli_latest = release.get("cli_version")
         plugin_latest = release.get("plugin_version")
         cli_key, cli_latest_key = version_key(__version__), version_key(cli_latest)
-        plugin_key, plugin_latest_key = version_key(PLUGIN_VERSION), version_key(plugin_latest)
+        plugin_key, plugin_latest_key = plugin_version_key(PLUGIN_VERSION), plugin_version_key(plugin_latest)
         if (not cli_key or not cli_latest_key or not plugin_key or not plugin_latest_key
                 or release.get("plugin_marketplace") != PLUGIN_MARKETPLACE):
             return
